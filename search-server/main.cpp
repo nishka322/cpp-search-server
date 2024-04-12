@@ -1,12 +1,8 @@
-// Решите загадку: Сколько чисел от 1 до 1000 содержат как минимум одну цифру 3?
-// Напишите ответ здесь: 271
-
-// Закомитьте изменения и отправьте их в свой репозиторий.
-
 #include <algorithm>
 #include <cmath>
 #include <iostream>
 #include <map>
+#include <numeric> // добавлено для std::accumulate
 #include <set>
 #include <string>
 #include <utility>
@@ -86,18 +82,18 @@ public:
     // Фильтрация документов должна производиться до отсечения топа из пяти штук.
     // функция вывода 5 наиболее релевантных результатов из всех найденных
 
-    vector<Document> FindTopDocuments(const string& raw_query, DocumentStatus status) const{
+    vector<Document> FindTopDocuments(const string& raw_query, DocumentStatus status = DocumentStatus::ACTUAL) const{ //Если тут задать статус по умолчанию, то FindTopDocuments(const string& raw_query) будет не нужен
         auto predict = [status](int document_id, DocumentStatus doc_status, int rating) {
             return doc_status == status;
         };
         return FindTopDocuments(raw_query, predict);
     }
-
-    vector<Document> FindTopDocuments(const string& raw_query) const {
+    // Избыточно после введения статуса в функцию выше
+    /*vector<Document> FindTopDocuments(const string& raw_query) const {
         return FindTopDocuments(raw_query, [](int document_id, DocumentStatus status, int rating){
             return status == DocumentStatus::ACTUAL;
         });
-    }
+    }*/
 
     template<typename predicate>
     vector<Document> FindTopDocuments(const string& raw_query, predicate predict) const {
@@ -106,11 +102,11 @@ public:
 
         sort(matched_documents.begin(), matched_documents.end(),
              [](const Document& lhs, const Document& rhs) {
-                 if (abs(lhs.relevance - rhs.relevance) < 1e-6) {
+                 if (abs(lhs.relevance - rhs.relevance) < numeric_limits<double>::epsilon()) { //Избавились от магических чисел через стандартный std::numeric_limits<double>::epsilon()
                      return lhs.rating > rhs.rating;
-                 } else {
+                 } //else {  else не обязателен, т.к. используется return
                      return lhs.relevance > rhs.relevance;
-                 }
+                 //}
              });
         if (matched_documents.size() > MAX_RESULT_DOCUMENT_COUNT) {
             matched_documents.resize(MAX_RESULT_DOCUMENT_COUNT);
@@ -177,7 +173,7 @@ private:
     }
 
     static int ComputeAverageRating(const vector<int>& ratings) {
-        if (ratings.empty()) {
+        /*if (ratings.empty()) {
             return 0;
         }
         int rating_sum = 0;
@@ -185,6 +181,11 @@ private:
             rating_sum += rating;
         }
         return rating_sum / static_cast<int>(ratings.size());
+    }*/
+        // спользуя std::accumulate запись будет короче
+        if (ratings.empty()) return 0;
+        return accumulate(begin(ratings), end(ratings), 0)
+        / static_cast<int>(ratings.size());
     }
 
     struct QueryWord {
