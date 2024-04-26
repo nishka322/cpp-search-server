@@ -78,7 +78,6 @@ enum class DocumentStatus {
 class SearchServer {
 public:
     // Вместо SetStopWords
-    inline static constexpr int INVALID_DOCUMENT_ID = -1;
 
     template <typename StringContainer>
     explicit SearchServer(const StringContainer& stop_words)
@@ -107,9 +106,6 @@ public:
         if (documents_.count(document_id)){//Попытка добавить документ c id ранее добавленного документа;
             throw invalid_argument("repeat document id");
         }
-        if (IsValidWord(document) == false) {//Наличие недопустимых символов (с кодами от 0 до 31) в тексте добавляемого документа.
-            throw invalid_argument("Invalid word");
-        }
         const vector<string> words = SplitIntoWordsNoStop(document);
         const double inv_word_count = 1.0 / words.size();
         for (const string& word : words) {
@@ -123,7 +119,7 @@ public:
     // функция вывода 5 наиболее релевантных результатов из всех найденных
 
     vector<Document>  FindTopDocuments(const string& raw_query, DocumentStatus status = DocumentStatus::ACTUAL) const{ //Если тут задать статус по умолчанию, то FindTopDocuments(const string& raw_query) будет не нужен
-        if (IsValidQuery(raw_query) == false){
+        if (IsValidWord(raw_query) == false){
             throw invalid_argument("Invalid word in FindTopDocument function");
         }
         auto predict = [status](int document_id, DocumentStatus doc_status, int rating) {
@@ -134,7 +130,7 @@ public:
 
     template<typename predicate>
     vector<Document> FindTopDocuments(const string& raw_query, predicate predict) const {
-        if (IsValidQuery(raw_query) == false){
+        if (IsValidWord(raw_query) == false){
             throw invalid_argument("Invalid word in FindTopDocument function");
         }
         const Query query = ParseQuery(raw_query);
@@ -165,7 +161,7 @@ public:
     // Если документ не соответствует запросу(нет пересечений по плюс - словам
     // или есть минус - слово), вектор слов нужно вернуть пустым.
     const {
-        if (IsValidQuery(raw_query) == false){
+        if (IsValidWord(raw_query) == false){
             throw invalid_argument("Invalid word in MatchDocument function");
         }
         const Query query = ParseQuery(raw_query);
@@ -214,7 +210,10 @@ private:
 // функция считывания слов поискового запроса и удаления из него стоп-слов (считывание плюс-слов)
     vector<string> SplitIntoWordsNoStop(const string& text) const {
         vector<string> words;
-        for (const string& word : SplitIntoWords(text)) {
+                for (const string& word : SplitIntoWords(text)) {
+                    if (IsValidWord(word) == false) {//Наличие недопустимых символов (с кодами от 0 до 31) в тексте добавляемого документа.
+                        throw invalid_argument("Invalid word");
+                    }
             if (!IsStopWord(word)) {
                 words.push_back(word);
             }
@@ -237,15 +236,16 @@ private:
 
     // обработка минус-слов запроса
     QueryWord ParseQueryWord(string text) const {
-        bool is_minus = false;
         QueryWord result;
-        // Word shouldn't be empty
+        bool is_minus = false;
         if (text[0] == '-') {
             is_minus = true;
             text = text.substr(1);
         }
-        result = {text, is_minus, IsStopWord(text)};
-        return result;
+        if (text.empty() || text[0] == '-') {//.empty отсекает "кот -", text[0] == '-' отсекает "--кот"
+            throw invalid_argument("Invalid ParseQueryWord"s);
+        }
+        return { text, is_minus, IsStopWord(text) };
     }
 
     struct Query {
@@ -312,20 +312,6 @@ private:
         return none_of(word.begin(), word.end(), [](char c) {
             return c >= '\0' && c < ' ';
         });
-    }
-//отдельный метод для определения корректности слов
-    static bool IsValidQuery(const string& raw_query) {
-        if(IsValidWord(raw_query)==false) { //Проверка на спецсимволы
-            return false;
-        }
-        for (int i = 0; i < raw_query.size(); ++i) { //проверка на минусы
-            if (raw_query[i] == '-' || raw_query[raw_query.size()-1]=='-') {
-                if (raw_query[i + 1] == '-' || raw_query[i + 1] == ' ') {
-                    return false;
-                }
-            }
-        }
-        return true;
     }
 };
 
