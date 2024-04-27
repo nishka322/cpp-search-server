@@ -242,8 +242,11 @@ private:
             is_minus = true;
             text = text.substr(1);
         }
+        if (IsValidWord(text) == false) {//Наличие недопустимых символов (с кодами от 0 до 31) в тексте добавляемого документа.
+            throw invalid_argument("Invalid word. Words ASCII 0-31.");
+        }
         if (text.empty() || text[0] == '-') {//.empty отсекает "кот -", text[0] == '-' отсекает "--кот"
-            throw invalid_argument("Invalid ParseQueryWord"s);
+            throw invalid_argument("Invalid minus word in ParseQueryWord"s);
         }
         return { text, is_minus, IsStopWord(text) };
     }
