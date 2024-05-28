@@ -33,14 +33,6 @@ private:
     size_t size_;
 };
 
-std::ostream& operator<<(std::ostream& out, const Document& document) {
-    out << "{ "s
-        << "document_id = "s << document.id << ", "s
-        << "relevance = "s << document.relevance << ", "s
-        << "rating = "s << document.rating << " }"s;
-    return out;
-}
-
 //Вам понадобятся операторы вывода для типа Document и для типа IteratorRange.
 template <typename Iterator>
 std::ostream& operator<<(std::ostream& out, const IteratorRange<Iterator>& range) {
